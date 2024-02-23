@@ -1,0 +1,39 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "pack-src": "rimraf src.zip && jszip-cli add src/ package.json .gitignore vite.config.ts tsconfig.json tsconfig.node.json -o ./release/src.zip",
+    "pack-xpi": "web-ext build -s ./dist-firefox/ -o -a release/ -n firefox.zip",
+    "pack-zip": "rimraf extension.zip && jszip-cli add dist/ -o ./release/chrome.zip",
+    "pack-all": "rimraf release && pnpm build && pnpm pack-xpi && pnpm pack-src && pnpm pack-zip"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "2.0.0-beta.23",
+    "@ffflorian/jszip-cli": "^3.6.2",
+    "@liuli-util/async": "^3.7.0",
+    "@liuli-util/vite-plugin-firefox-dist": "^0.3.0",
+    "@preact/preset-vite": "^2.8.1",
+    "@preact/signals": "^1.2.2",
+    "@types/postcss-prefix-selector": "^1.16.3",
+    "@types/preact-custom-element": "^4.0.4",
+    "@types/webextension-polyfill": "^0.10.7",
+    "autoprefixer": "^10.4.17",
+    "clsx": "^2.1.0",
+    "langchain": "^0.1.21",
+    "postcss": "^8.4.35",
+    "postcss-prefix-selector": "^1.16.0",
+    "preact": "^10.19.6",
+    "preact-custom-element": "^4.3.0",
+    "react-use": "^17.5.0",
+    "rimraf": "^5.0.5",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.4",
+    "vite-plugin-svgr": "^4.2.0",
+    "web-ext": "^7.11.0",
+    "webextension-polyfill": "^0.10.0"
+  }
+}
