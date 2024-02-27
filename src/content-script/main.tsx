@@ -89,15 +89,17 @@ function App() {
     progress.value = { ...progress.value, status: 'pending' }
     for (let i = 0; i < chunks.value.length; i++) {
       if (progress.value.status === 'idle') {
+        new Notification('Auto prompt canceled')
         return
       }
       const it = chunks.value[i]
       sendPrompt(it)
       progress.value = { current: i, status: 'pending' }
-      await wait(() => !canSend())
+      await Promise.race([wait(() => !canSend()), wait(3000)])
       await wait(canSend)
     }
     progress.value = { ...progress.value, status: 'done' }
+    new Notification('Auto prompt finished')
   }
 
   function onClose() {
