@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ChatGPT Splitter",
   "description": "Automatically splits long texts and inputs them into ChatGPT",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "background": {
     "service_worker": "src/background.ts"
   },
