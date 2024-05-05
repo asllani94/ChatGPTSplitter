@@ -23,6 +23,9 @@ devDependencies:
   '@preact/signals':
     specifier: ^1.2.2
     version: 1.2.2(preact@10.19.6)
+  '@types/lodash-es':
+    specifier: ^4.17.12
+    version: 4.17.12
   '@types/postcss-prefix-selector':
     specifier: ^1.16.3
     version: 1.16.3
@@ -41,6 +44,9 @@ devDependencies:
   langchain:
     specifier: ^0.1.21
     version: 0.1.21
+  lodash-es:
+    specifier: ^4.17.21
+    version: 4.17.21
   postcss:
     specifier: ^8.4.35
     version: 8.4.35
@@ -1456,6 +1462,16 @@ packages:
 
   /@types/js-cookie@2.2.7:
     resolution: {integrity: sha512-aLkWa0C0vO5b4Sr798E26QgOkss68Un0bLjs7u9qxzPT5CG+8DuNTffWES58YzJs3hrVAOs1wonycqEBqNJubA==}
+    dev: true
+
+  /@types/lodash-es@4.17.12:
+    resolution: {integrity: sha512-0NgftHUcV4v34VhXm8QBSftKVXtbkBG3ViCjs6+eJ5a6y6Mi/jiFGPc1sC7QK+9BFhWrURE3EOggmWaSxL9OzQ==}
+    dependencies:
+      '@types/lodash': 4.17.1
+    dev: true
+
+  /@types/lodash@4.17.1:
+    resolution: {integrity: sha512-X+2qazGS3jxLAIz5JDXDzglAF3KpijdhFxlf/V1+hEsOUc+HnWi81L/uv/EvGuV90WY+7mPGFCUDGfQC3Gj95Q==}
     dev: true
 
   /@types/minimatch@3.0.5:

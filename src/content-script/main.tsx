@@ -8,32 +8,11 @@ import { register } from '../utils/ext'
 import { ContentChannel } from './model'
 import css from './style.css?inline'
 import CloseSvg from '../assets/close.svg?react'
+import { chatgpt } from './chatgpt'
+import { poe } from './poe'
+import { difference } from 'lodash-es'
 
 const CHATGPT_SPLITTER_MODAL_ID = 'chatgpt-splitter-modal'
-
-function canSend() {
-  const $sendButton = document.querySelector('[data-testid="send-button"]')
-  if (!$sendButton) {
-    return false
-  }
-  return true
-}
-
-function sendPrompt(text: string) {
-  if (!canSend()) {
-    return
-  }
-  const $sendButton = document.querySelector('[data-testid="send-button"]')
-  const $input = document.querySelector(
-    '#prompt-textarea',
-  ) as HTMLTextAreaElement
-  if (!$input || !$sendButton) {
-    throw new Error('No input or send button found')
-  }
-  $input.value = text
-  $input.dispatchEvent(new InputEvent('input', { bubbles: true }))
-  $sendButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-}
 
 function useStorageSignal<T>(key: string, defaultValue: T): Signal<T> {
   const value = localStorage.getItem(key)
@@ -75,9 +54,13 @@ function App() {
       chunks.value = []
       return
     }
-    const splitter = RecursiveCharacterTextSplitter.fromLanguage('markdown', {
+    const splitter = new RecursiveCharacterTextSplitter({
       chunkSize: limit.value,
       chunkOverlap: 0,
+      separators: difference(
+        RecursiveCharacterTextSplitter.getSeparatorsForLanguage('markdown'),
+        ['\n\n***\n\n', '\n\n---\n\n', '\n\n___\n\n'],
+      ),
     })
     chunks.value = await splitter.splitText(inupt.value)
   }) as any)
@@ -93,10 +76,15 @@ function App() {
         return
       }
       const it = chunks.value[i]
-      sendPrompt(it)
+      const chats = [chatgpt(), poe()]
+      const chat = chats.find((it) => location.host === it.domain)
+      if (!chat) {
+        throw new Error('No chat found')
+      }
+      await chat.sendPrompt(it)
       progress.value = { current: i, status: 'pending' }
-      await Promise.race([wait(() => !canSend()), wait(3000)])
-      await wait(canSend)
+      await Promise.race([wait(() => !chat.canSend()), wait(3000)])
+      await wait(chat.canSend)
     }
     progress.value = { ...progress.value, status: 'done' }
     new Notification('Auto prompt finished')
@@ -131,7 +119,7 @@ function App() {
             }
             rows={10}
             class={
-              'bg-white text-black dark:bg-gray-700 dark:text-white w-full'
+              'bg-white text-black dark:bg-gray-700 dark:text-white w-full border border-gray-300 rounded-md p-2 outline-none'
             }
           ></textarea>
         </div>
@@ -152,7 +140,9 @@ function App() {
                 (ev.target as HTMLInputElement).value,
               ))
             }
-            class={'bg-white text-black dark:bg-gray-700 dark:text-white'}
+            class={
+              'bg-white text-black dark:bg-gray-700 dark:text-white border border-gray-300 rounded-md p-2'
+            }
           ></input>
         </div>
         <footer>
@@ -217,6 +207,3 @@ if (import.meta.hot) {
   import.meta.hot.accept(unregister)
   import.meta.hot.dispose(unregister)
 }
-
-Reflect.set(globalThis, 'sendPrompt', sendPrompt)
-Reflect.set(globalThis, 'canSend', canSend)

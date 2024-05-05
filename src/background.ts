@@ -2,11 +2,15 @@ import Browser from 'webextension-polyfill'
 import { warp } from './utils/ext'
 import { ContentChannel } from './content-script/model'
 
-
-
 // 监听浏览器扩展工具栏图标点击事件
 Browser.action.onClicked.addListener((tab) => {
-  if (!tab.url || !tab.url.startsWith('https://chat.openai.com/')) {
+  if (
+    !tab.url ||
+    !(
+      tab.url.startsWith('https://chat.openai.com/') ||
+      tab.url.startsWith('https://poe.com/chat/')
+    )
+  ) {
     return
   }
   warp<ContentChannel>({ name: 'content', tabId: tab.id }).toggle()

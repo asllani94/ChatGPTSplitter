@@ -27,7 +27,15 @@ export default defineConfig({
       plugins: [
         tailwind(),
         autoprefixer(),
-        prefixer({ prefix: '.chatgpt-splitter' }),
+        prefixer({
+          prefix: '.chatgpt-splitter',
+          transform(_prefix, selector, prefixedSelector, _file) {
+            if (selector.startsWith('.chatgpt-splitter')) {
+              return selector
+            }
+            return prefixedSelector
+          },
+        }),
       ],
     },
   },
