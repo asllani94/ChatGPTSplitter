@@ -2,7 +2,7 @@ import './style.css'
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter'
 import { useAsyncFn, useLocalStorage, useMount } from 'react-use'
 import { chatgpt } from './chatgpt'
-import { poe } from './poe'
+import { ms_copilot } from './ms_copilot'
 import { difference } from 'lodash-es'
 import { wait } from '@liuli-util/async'
 import { createRoot } from 'react-dom/client'
@@ -63,7 +63,7 @@ function App() {
         return
       }
       const it = chunks[i]
-      const chats = [chatgpt(), poe()]
+      const chats = [chatgpt(), ms_copilot()]
       const chat = chats.find((it) => location.host === it.domain)
       if (!chat) {
         throw new Error('No chat found')
@@ -173,7 +173,7 @@ function App() {
 }
 
 export default defineContentScript({
-  matches: ['https://chat.openai.com/**', 'https://poe.com/chat/*'],
+  matches: ['https://chat.openai.com/**', 'https://copilot.cloud.microsoft/**'],
   cssInjectionMode: 'ui',
   main(ctx) {
     console.log('Hello content.')
