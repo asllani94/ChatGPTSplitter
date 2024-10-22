@@ -3,10 +3,10 @@ import { IChat } from './model'
 export function ms_copilot(): IChat {
   return {
     name: 'ms_copilot',
-    domain: 'copilot.cloud.microsoft',
+    domain: 'm365.cloud.microsoft',
     canSend() {
       const $iframeDoc = document.querySelector('[data-tid="app-host-iframe"]');
-      const $sendButton = $iframeDoc.querySelector('[is="cib-button"]')
+      const $sendButton = $iframeDoc!!.querySelector('[is="cib-button"]')
       if (!$sendButton) {
         return false
       }
@@ -17,8 +17,8 @@ export function ms_copilot(): IChat {
         return
       }
       const $iframeDoc = document.querySelector('[data-tid="app-host-iframe"]');
-      const $sendButton = $iframeDoc.querySelector('[is="cib-button"]')
-      const $input = $iframeDoc.querySelector(
+      const $sendButton = $iframeDoc!!.querySelector('[is="cib-button"]')
+      const $input = $iframeDoc!!.querySelector(
         '#searchbox.text-area',
       ) as HTMLTextAreaElement
       if (!$input || !$sendButton) {

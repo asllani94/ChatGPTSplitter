@@ -173,7 +173,7 @@ function App() {
 }
 
 export default defineContentScript({
-  matches: ['https://chat.openai.com/**', 'https://copilot.cloud.microsoft/**'],
+  matches: ['https://chat.openai.com/**', 'https://m365.cloud.microsoft/**'],
   cssInjectionMode: 'ui',
   main(ctx) {
     console.log('Hello content.')

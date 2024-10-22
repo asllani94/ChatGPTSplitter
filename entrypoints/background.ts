@@ -6,7 +6,7 @@ export default defineBackground(() => {
       !tab.url ||
       !(
         tab.url.startsWith('https://chat.openai.com/') ||
-        tab.url.startsWith('https://copilot.cloud.microsoft/')
+        tab.url.startsWith('https://m365.cloud.microsoft/')
       )
     ) {
       return
