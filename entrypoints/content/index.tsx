@@ -11,16 +11,28 @@ interface ButtonsState {
   [key: string]: boolean;
 }
 
-function getMarkerSize(partNum: number, totalParts: number): number {
-  return `[START PART ${partNum}/${totalParts}]\n\n[END PART ${partNum}/${totalParts}]`.length;
+const INSTRUCTION_TEXT = `The total length of the content that I want to send you is too large to send in only one piece.
+For sending you that content, I will follow this rule:
+[START PART 1/{totalParts}]
+this is the content of the part 1 out of {totalParts} in total
+[END PART 1/{totalParts}]
+Then you just answer: "Received part 1/{totalParts}"
+And when I tell you "ALL PARTS SENT", then you can continue processing the data and answering my requests.`
+
+const COMPLETION_MARKER = '\nALL PARTS SENT'
+
+function getMarkerSize(partNum: number, totalParts: number, isLastPart: boolean = false): number {
+  const baseSize = `[START PART ${partNum}/${totalParts}]\n\n[END PART ${partNum}/${totalParts}]`.length;
+  
+  return isLastPart ? baseSize + COMPLETION_MARKER.length : baseSize;
 }
 
-function useChunks(text: string, limit: number | undefined) {
+function useChunks(text: string, limit: number) {
   let emptyStringArray: string[] = [];
   const [chunks, setChunks] = useState(emptyStringArray)
   
   useEffect(() => {
-    if (text.trim().length === 0 || !limit || limit === 0) {
+    if (text.trim().length === 0 || limit === 0) {
       setChunks([])
       return
     }
@@ -37,13 +49,15 @@ function useChunks(text: string, limit: number | undefined) {
       });
 
       const estimatedChunks = await estimateSplitter.splitText(text);
-      const numChunks = estimatedChunks.length;
+      const needsInstructions = estimatedChunks.length > 1;
       
       // Calculate marker size for the estimated number of chunks
-      const markerSize = getMarkerSize(numChunks, numChunks);
+      const totalParts = needsInstructions ? estimatedChunks.length + 1 : estimatedChunks.length;
+      // Use the maximum marker size (includes completion marker)
+      const maxMarkerSize = getMarkerSize(totalParts, totalParts, true);
       
       // Second pass: Adjust chunk size to account for markers
-      const adjustedLimit = limit - markerSize;
+      const adjustedLimit = limit - maxMarkerSize;
       
       if (adjustedLimit <= 0) {
         console.error('Limit too small after accounting for markers');
@@ -60,22 +74,27 @@ function useChunks(text: string, limit: number | undefined) {
         ),
       });
 
-      const finalChunks = await finalSplitter.splitText(text);
+      const contentChunks = await finalSplitter.splitText(text);
       
       // Verify that chunks with markers will fit within limit
-      const actualMarkerSize = getMarkerSize(finalChunks.length, finalChunks.length);
-      const isValid = finalChunks.every(chunk => 
-        (chunk.length + actualMarkerSize) <= limit
-      );
+      const isValid = contentChunks.every((chunk, index) => {
+        const isLast = index === contentChunks.length - 1;
+        const markerSize = getMarkerSize(totalParts, totalParts, isLast);
+        return (chunk.length + markerSize) <= limit;
+      });
 
       if (!isValid) {
         console.error('Some chunks would exceed limit with markers');
-        // If needed, we could do another pass with a smaller limit
         setChunks([]);
         return;
       }
 
-      setChunks(finalChunks);
+      if (needsInstructions) {
+        const instructions = INSTRUCTION_TEXT.replace(/\{totalParts\}/g, String(totalParts));
+        setChunks([instructions, ...contentChunks]);
+      } else {
+        setChunks(contentChunks);
+      }
     }
 
     createChunks();
@@ -86,7 +105,9 @@ function useChunks(text: string, limit: number | undefined) {
 
 function App() {
   const [text, setText] = useState('')
-  const [limit, setLimit] = useLocalStorage('CHATGPT_SPLITTER_CHUNK_LIMIT', 0)
+  const [rawLimit, setLimit] = useLocalStorage('CHATGPT_SPLITTER_CHUNK_LIMIT', 8000)
+  const limit = Number(rawLimit ?? 8000); // use nullish coalescing
+
   const chunks = useChunks(text, limit)
   const [buttonsState, setButtonsState] = useState<ButtonsState>({})
   const [hide, toggle] = useReducer((state) => !state, true)
@@ -106,12 +127,14 @@ function App() {
     }));
   };
 
-  function formatChunkWithParts(chunk: string, index: number, total: number): string {
-    return `[START PART ${index + 1}/${total}]\n${chunk}\n[END PART ${index + 1}/${total}]`;
+  function formatChunkWithParts(chunk: string, index: number, total: number, isLastChunk: boolean = false): string {
+    const formattedChunk = `[START PART ${index + 1}/${total}]\n${chunk}\n[END PART ${index + 1}/${total}]`;
+    return isLastChunk ? formattedChunk + COMPLETION_MARKER : formattedChunk;
   }
 
   function copyToClipboard(chunk: string, index: number) {
-    const formattedChunk = formatChunkWithParts(chunk, index, chunks.length);
+    const isLastChunk = index === chunks.length - 1;
+    const formattedChunk = formatChunkWithParts(chunk, index, chunks.length, isLastChunk);
     navigator.clipboard.writeText(formattedChunk).then(() => {
       disableButton(`button_${index}`);
     });
@@ -153,7 +176,7 @@ function App() {
               <span>Split Limit:</span>
               <span className={'text-gray-300'}>
                 chunks: {chunks.length}
-                {chunks.length > 0 && ` (markers: ${getMarkerSize(chunks.length, chunks.length)})`}
+                {chunks.length > 0 && ` (markers: ${getMarkerSize(chunks.length, chunks.length, true)})`}
               </span>
             </label>
           </div>
@@ -185,6 +208,7 @@ function App() {
                 disabled={buttonsState[`button_${index}`]}
               >
                 Copy {index + 1} / {chunks.length}
+                {/* {index === 0 && chunks.length > 1 && limit || 0 > 8000 && ' (Instructions)'} */}
               </button>
             </div>
           ))}
@@ -206,7 +230,6 @@ function App() {
   )
 }
 
-
 export default defineContentScript({
   matches: ["<all_urls>"],
   cssInjectionMode: 'ui',
@@ -215,9 +238,10 @@ export default defineContentScript({
 
     async function onCreateModal() {
       const ui = await createShadowRootUi(ctx, {
-        name: 'chatgpt-splitter',
+        name: 'llm-splitter',
         position: 'inline',
         onMount: (container) => {
+          console.debug("Test")
           const app = document.createElement('div')
           container.append(app)
 
