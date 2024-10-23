@@ -1,44 +1,86 @@
 import './style.css'
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter'
-import { useAsyncFn, useLocalStorage, useMount } from 'react-use'
+import { useLocalStorage, useMount } from 'react-use'
 import { difference } from 'lodash-es'
-import { wait } from '@liuli-util/async'
 import { createRoot } from 'react-dom/client'
 import clsx from 'clsx'
 import { onMessage } from '../model/messaging'
-import { useEffect, useState, useReducer, useCallback } from 'react'
+import { useEffect, useState, useReducer } from 'react'
 
 interface ButtonsState {
   [key: string]: boolean;
 }
 
-interface PartialMessage {
-  content: string;
-  partNumber: number;
-  totalParts: number;
+function getMarkerSize(partNum: number, totalParts: number): number {
+  return `[START PART ${partNum}/${totalParts}]\n\n[END PART ${partNum}/${totalParts}]`.length;
 }
 
 function useChunks(text: string, limit: number | undefined) {
   let emptyStringArray: string[] = [];
   const [chunks, setChunks] = useState(emptyStringArray)
-
+  
   useEffect(() => {
-    if (text.trim().length === 0 || limit === 0) {
+    if (text.trim().length === 0 || !limit || limit === 0) {
       setChunks([])
       return
     }
-    const splitter = new RecursiveCharacterTextSplitter({
-      chunkSize: limit,
-      chunkOverlap: 0,
-      separators: difference(
-        RecursiveCharacterTextSplitter.getSeparatorsForLanguage('markdown'),
-        ['\n\n***\n\n', '\n\n---\n\n', '\n\n___\n\n'],
-      ),
-    })
-    ;(async () => {
-      setChunks(await splitter.splitText(text))
-    })()
+
+    const createChunks = async () => {
+      // First pass: Get an estimate of chunks using full limit
+      const estimateSplitter = new RecursiveCharacterTextSplitter({
+        chunkSize: limit,
+        chunkOverlap: 0,
+        separators: difference(
+          RecursiveCharacterTextSplitter.getSeparatorsForLanguage('markdown'),
+          ['\n\n***\n\n', '\n\n---\n\n', '\n\n___\n\n'],
+        ),
+      });
+
+      const estimatedChunks = await estimateSplitter.splitText(text);
+      const numChunks = estimatedChunks.length;
+      
+      // Calculate marker size for the estimated number of chunks
+      const markerSize = getMarkerSize(numChunks, numChunks);
+      
+      // Second pass: Adjust chunk size to account for markers
+      const adjustedLimit = limit - markerSize;
+      
+      if (adjustedLimit <= 0) {
+        console.error('Limit too small after accounting for markers');
+        setChunks([]);
+        return;
+      }
+
+      const finalSplitter = new RecursiveCharacterTextSplitter({
+        chunkSize: adjustedLimit,
+        chunkOverlap: 0,
+        separators: difference(
+          RecursiveCharacterTextSplitter.getSeparatorsForLanguage('markdown'),
+          ['\n\n***\n\n', '\n\n---\n\n', '\n\n___\n\n'],
+        ),
+      });
+
+      const finalChunks = await finalSplitter.splitText(text);
+      
+      // Verify that chunks with markers will fit within limit
+      const actualMarkerSize = getMarkerSize(finalChunks.length, finalChunks.length);
+      const isValid = finalChunks.every(chunk => 
+        (chunk.length + actualMarkerSize) <= limit
+      );
+
+      if (!isValid) {
+        console.error('Some chunks would exceed limit with markers');
+        // If needed, we could do another pass with a smaller limit
+        setChunks([]);
+        return;
+      }
+
+      setChunks(finalChunks);
+    }
+
+    createChunks();
   }, [text, limit])
+  
   return chunks
 }
 
@@ -48,10 +90,6 @@ function App() {
   const chunks = useChunks(text, limit)
   const [buttonsState, setButtonsState] = useState<ButtonsState>({})
   const [hide, toggle] = useReducer((state) => !state, true)
-
-  // State for handling partial messages
-  const [partialMessages, setPartialMessages] = useState<Record<number, string>>({})
-  const [expectedTotalParts, setExpectedTotalParts] = useState<number | null>(null)
 
   useEffect(() => {
     const initialState: ButtonsState = {};
@@ -68,115 +106,13 @@ function App() {
     }));
   };
 
-  // Calculate the overhead length of part markers
-  const getPartMarkersLength = (partNum: number, totalParts: number): number => {
-    return `[START PART ${partNum}/${totalParts}]\n\n[END PART ${partNum}/${totalParts}]`.length;
-  };
+  function formatChunkWithParts(chunk: string, index: number, total: number): string {
+    return `[START PART ${index + 1}/${total}]\n${chunk}\n[END PART ${index + 1}/${total}]`;
+  }
 
-  // Function to parse a message part
-  const parseMessagePart = (text: string): PartialMessage | null => {
-    const startMatch = text.match(/\[START PART (\d+)\/(\d+)\]/);
-    const endMatch = text.match(/\[END PART \d+\/\d+\]/);
-
-    if (!startMatch || !endMatch) return null;
-
-    const partNumber = parseInt(startMatch[1]);
-    const totalParts = parseInt(startMatch[2]);
-    const content = text.slice(
-      startMatch[0].length,
-      text.length - endMatch[0].length
-    ).trim();
-
-    return { content, partNumber, totalParts };
-  };
-
-  // Function to generate message parts that respect the size limit
-  const generateMessageParts = useCallback((text: string, chunkLimit: number): string[] => {
-    const parts: string[] = [];
-    let remainingText = text;
-
-    while (remainingText.length > 0) {
-      // Calculate how many parts we might need (estimate)
-      const estimatedTotalParts = Math.ceil(remainingText.length / (chunkLimit - 50)); // 50 chars buffer for markers
-
-      // Calculate actual available space for content in this part
-      const markersLength = getPartMarkersLength(parts.length + 1, estimatedTotalParts);
-      const availableSpace = chunkLimit - markersLength;
-
-      // Get content that fits
-      const content = remainingText.slice(0, availableSpace);
-      remainingText = remainingText.slice(availableSpace);
-
-      // Create the part with proper markers
-      const part = `[START PART ${parts.length + 1}/${estimatedTotalParts}]\n${content}\n[END PART ${parts.length + 1}/${estimatedTotalParts}]`;
-      parts.push(part);
-
-      // If we need to recalculate total parts
-      if (remainingText.length > 0) {
-        // Recalculate parts array with updated total count
-        const actualTotalParts = parts.length + Math.ceil(remainingText.length / (chunkLimit - 50));
-        parts[parts.length - 1] = `[START PART ${parts.length}/${actualTotalParts}]\n${content}\n[END PART ${parts.length}/${actualTotalParts}]`;
-      }
-    }
-
-    // Final pass to ensure all parts have correct total
-    const totalParts = parts.length;
-    return parts.map((part, index) => {
-      const content = part.match(/\n(.*)\n\[END/s)?.[1] || '';
-      return `[START PART ${index + 1}/${totalParts}]\n${content}\n[END PART ${index + 1}/${totalParts}]`;
-    });
-  }, []);
-
-  // Function to handle text input and potentially split it into parts
-  const handleTextInput = (inputText: string) => {
-    // Check if this is a part of a multi-part message
-    const parsedPart = parseMessagePart(inputText);
-
-    if (parsedPart) {
-      // This is a part of a multi-part message
-      setPartialMessages(prev => ({
-        ...prev,
-        [parsedPart.partNumber]: parsedPart.content
-      }));
-      setExpectedTotalParts(parsedPart.totalParts);
-
-      // If this completes the message, combine all parts
-      const updatedMessages = {
-        ...partialMessages,
-        [parsedPart.partNumber]: parsedPart.content
-      };
-
-      if (Object.keys(updatedMessages).length === parsedPart.totalParts) {
-        const combinedText = Array.from(
-          { length: parsedPart.totalParts },
-          (_, i) => updatedMessages[i + 1]
-        ).join('');
-        setText(combinedText);
-        setPartialMessages({});
-        setExpectedTotalParts(null);
-      }
-    } else {
-      // This is a regular input
-      setText(inputText);
-    }
-  };
-
-  function copyToClipboard(text: string, index: number) {
-    if (!limit) {
-      console.error('Chunk size limit not set');
-      return;
-    }
-
-    const parts = generateMessageParts(text, limit);
-
-    // Verify that no part exceeds the limit
-    const oversizedParts = parts.filter(part => part.length > limit);
-    if (oversizedParts.length > 0) {
-      console.error(`${oversizedParts.length} parts exceed the size limit`);
-      return;
-    }
-
-    navigator.clipboard.writeText(parts[0]).then(() => {
+  function copyToClipboard(chunk: string, index: number) {
+    const formattedChunk = formatChunkWithParts(chunk, index, chunks.length);
+    navigator.clipboard.writeText(formattedChunk).then(() => {
       disableButton(`button_${index}`);
     });
   }
@@ -198,11 +134,11 @@ function App() {
         }
       >
         <div>
-          <label className={'font-bold size-6'}>ChatGPT Splitter</label>
+          <label className={'font-bold size-6'}>LLM Splitter</label>
           <textarea
             value={text}
             onInput={(ev) => {
-              handleTextInput((ev.target as HTMLTextAreaElement).value)
+              setText((ev.target as HTMLTextAreaElement).value)
             }}
             rows={10}
             className={
@@ -210,26 +146,21 @@ function App() {
             }
           ></textarea>
         </div>
-
-        {expectedTotalParts && (
-          <div className="mt-2 text-sm text-blue-500">
-            Received {Object.keys(partialMessages).length} / {expectedTotalParts} parts
-          </div>
-        )}
-
+        
         <div className={'mb-2'}>
           <div>
             <label id={'limit'} className={'flex justify-between'}>
               <span>Split Limit:</span>
               <span className={'text-gray-300'}>
                 chunks: {chunks.length}
+                {chunks.length > 0 && ` (markers: ${getMarkerSize(chunks.length, chunks.length)})`}
               </span>
             </label>
           </div>
           <input
             id={'limit'}
             type={'number'}
-            min={0}
+            min={50}  // Minimum reasonable size for a chunk + markers
             value={limit}
             onChange={(ev) =>
               setLimit(Number.parseInt((ev.target as HTMLInputElement).value))
@@ -275,4 +206,34 @@ function App() {
   )
 }
 
-export default App
+
+export default defineContentScript({
+  matches: ["<all_urls>"],
+  cssInjectionMode: 'ui',
+  main(ctx) {
+    console.log('Hello content.')
+
+    async function onCreateModal() {
+      const ui = await createShadowRootUi(ctx, {
+        name: 'chatgpt-splitter',
+        position: 'inline',
+        onMount: (container) => {
+          const app = document.createElement('div')
+          container.append(app)
+
+          // Create a root on the UI container and render a component
+          const root = createRoot(app)
+          root.render(<App />)
+          return root
+        },
+        onRemove(root) {
+          // Unmount the root when the UI is removed
+          root?.unmount()
+        },
+      })
+      ui.mount()
+    }
+
+    onCreateModal()
+  },
+})

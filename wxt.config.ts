@@ -7,7 +7,7 @@ export default defineConfig({
     disabled: true,
   },
   manifest: {
-    name: 'ChatGPT Splitter',
+    name: 'LLM Splitter',
     description: 'Automatically splits long texts and inputs them into ChatGPT',
     permissions: ['activeTab'],
     action: {

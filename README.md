@@ -1,4 +1,4 @@
-# ChatGPT Splitter
+# LLM Splitter
 
 > This is a fork of [ChatGPTSplitter](https://github.com/rxliuli/ChatGPTSplitter) by [rxliuli](https://github.com/rxliuli), enhanced with Microsoft Copilot support and other improvements.
 

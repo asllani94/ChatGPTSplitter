@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-splitter",
-  "description": "Automatically splits long texts and inputs them into ChatGPT",
+  "description": "Splits long texts and inputs",
   "private": true,
   "version": "0.5.0",
   "type": "module",
