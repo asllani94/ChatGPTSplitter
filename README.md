@@ -1,4 +1,4 @@
-# ChatGPT Splitter
+# LLM Splitter
 
 > This is a fork of [ChatGPTSplitter](https://github.com/rxliuli/ChatGPTSplitter) by [rxliuli](https://github.com/rxliuli), enhanced with Microsoft Copilot support and other improvements.
 
@@ -46,7 +46,7 @@ A browser extension that automatically splits long texts and seamlessly inputs t
 1. Clone the repository:
 ```bash
 git clone https://github.com/asllani94/chatgpt-splitter.git
-cd chatgpt-splitter
+cd llm-splitter
 ```
 
 2. Install dependencies:
@@ -94,7 +94,7 @@ This extension is built using:
 ### Project Structure
 
 ```
-chatgpt-splitter/
+llm-splitter/
 ├── src/
 │   ├── components/    # React components
 │   ├── entrypoints/  # Extension entry points

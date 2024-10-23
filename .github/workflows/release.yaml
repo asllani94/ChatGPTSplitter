@@ -1,6 +1,6 @@
 env:
   DIRECTORY: .output
-  PROJECT_NAME: chatgpt-splitter
+  PROJECT_NAME: llm-splitter
 
 name: Deploy
 

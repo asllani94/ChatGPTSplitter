@@ -1,9 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-.disabled-button {
-    background-color: grey;
-    color: white;
-    cursor: not-allowed;
-}
