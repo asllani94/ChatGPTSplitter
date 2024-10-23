@@ -1,12 +1,10 @@
 # LLM Splitter
 
-> This is a fork of [ChatGPTSplitter](https://github.com/rxliuli/ChatGPTSplitter) by [rxliuli](https://github.com/rxliuli), enhanced with Microsoft Copilot support and other improvements.
-
-A browser extension that automatically splits long texts and seamlessly inputs them into ChatGPT or Microsoft Copilot, allowing you to process content that exceeds AI's token limit.
+A browser extension that helps you handle long texts in ChatGPT by automatically splitting them into properly formatted chunks and adding clear instructions for sequential processing. It makes it easy to copy and paste content that exceeds AI's token limit.
 
 ## Prerequisites
 
-1. Install Node.js (version 22 or higher) from [nodejs.org](https://nodejs.org/)
+1. Install Node.js (version 18 or higher) from [nodejs.org](https://nodejs.org/)
 
 2. Install pnpm:
    ```bash
@@ -34,7 +32,6 @@ A browser extension that automatically splits long texts and seamlessly inputs t
 ## Features
 
 - 🔄 Automatically splits long texts while preserving context
-- ⚡ Works directly in the ChatGPT or Microsoft Copilot interface
 - 📝 Maintains text coherence across splits
 - 🎯 Smart splitting using LangChain text splitters
 - 🖥️ Support for Chrome and Firefox browsers
@@ -45,8 +42,8 @@ A browser extension that automatically splits long texts and seamlessly inputs t
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/asllani94/chatgpt-splitter.git
-cd llm-splitter
+git https://github.com/asllani94/LLMSplitter.git
+cd LLMSplitter
 ```
 
 2. Install dependencies:
@@ -67,18 +64,25 @@ pnpm build:firefox
 - **Chrome**: Go to `chrome://extensions/`, enable Developer mode, and click "Load unpacked". Select the `dist` directory.
 - **Firefox**: Go to `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on", and select any file from the `dist` directory.
 
-### From Release
-
-Download the latest release for your browser from the [Releases](https://github.com/asllani94/chatgpt-splitter/releases) page.
-
 ## Development
 
 This extension is built using:
-- [WXT](https://wxt.dev) - Modern Web Extension Framework
-- React - UI Framework
-- TypeScript - Type Safety
-- Tailwind CSS - Styling
-- LangChain - Text Processing
+- [WXT](https://wxt.dev) v0.19.1 - Modern Web Extension Framework
+- React 18.3.1 - UI Framework
+- TypeScript 5.5.4 - Type Safety
+- Tailwind CSS 3.4.10 - Styling
+- LangChain 0.2.16 - Text Processing
+
+### Dependencies
+
+Key dependencies include:
+- `@liuli-util/async` - Async utilities
+- `@preact/signals-react` - State management
+- `@webext-core/messaging` - Extension messaging
+- `langchain` - Text processing and splitting
+- `lodash-es` - Utility functions
+- `react` and `react-dom` - UI framework
+- `react-use` - React hooks collection
 
 ### Available Scripts
 
@@ -98,22 +102,18 @@ llm-splitter/
 ├── src/
 │   ├── components/    # React components
 │   ├── entrypoints/  # Extension entry points
-│   ├── utils/        # Utility functions
-│   └── types/        # TypeScript types
+│   └── model/        # Extension logic
 ├── public/           # Static assets
 └── wxt.config.ts     # WXT configuration
 ```
 
-## Configuration
+## How It Works
 
-The extension can be configured through the options page:
-1. Right-click the extension icon
-2. Select "Options" or "Extension Options"
-3. Adjust settings for:
-    - Maximum chunk size
-    - Overlap between chunks
-    - Split strategy
-    - Custom delimiters
+1. The extension adds a UI panel to split long texts
+2. Text is processed using LangChain's `RecursiveCharacterTextSplitter`
+3. Content is split into manageable chunks while preserving context
+4. Each chunk is formatted with proper markers for sequential processing
+5. Chunks can be copied to clipboard for pasting into ChatGPT, Claude, MS Copilot or any other AI Chat
 
 ## Contributing
 
@@ -124,27 +124,24 @@ The extension can be configured through the options page:
 5. Push to the branch (`git push origin feature/amazing-feature`)
 6. Open a Pull Request
 
+## Version
+
+Current version: 1.0.0
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-- Original project: [ChatGPTSplitter](https://github.com/rxliuli/ChatGPTSplitter) by [rxliuli](https://github.com/rxliuli)
 - Built with [WXT](https://wxt.dev)
 - Uses [LangChain](https://js.langchain.com) for text processing
-- Inspired by the need to work with large texts in ChatGPT and Microsoft Copilot
-
-## Version History
-
-- 0.5.0 - Current version
-    - Removed POM support
-    - Added Microsoft Copilot support
+- Inspired by the need to work with large texts in ChatGPT
 
 ## Support
 
 For support, please:
-1. Check the [Issues](https://github.com/asllani94/chatgpt-splitter/issues) page
+1. Check the Issues page
 2. Create a new issue if your problem isn't already reported
 
 ---
