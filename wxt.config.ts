@@ -13,10 +13,10 @@ export default defineConfig({
     action: {
       default_title: 'Show Split Modal',
       default_icon: {
-        '16': 'icon/16.png',
-        '48': 'icon/48.png',
-        '128': 'icon/128.png',
-        '512': 'icon/512.png',
+        '16': 'icon/icon-16.png',
+        '48': 'icon/icon-48.png',
+        '128': 'icon/icon-128.png',
+        '512': 'icon/icon-512.png',
       },
     },
   },
